@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex,nofollow">
+<title>클로드 업무 자동화 — 상담 전 사전 질문지</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#ffffff; --ink:#15181d; --ink2:#5b6472; --line:#e2e5ea;
+    --accent:#ff7a2f; --accent-soft:#fff1e8; --ok:#0f9d58; --warn:#b45309; --warn-soft:#fff8e6;
+    --radius:14px; --shadow:0 1px 2px rgba(15,20,30,.06),0 8px 24px rgba(15,20,30,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0e1116; --card:#161a21; --ink:#e9edf3; --ink2:#98a2b3; --line:#262c36;
+           --accent:#ff8a44; --accent-soft:#2a1a10; --warn:#f0b34e; --warn-soft:#241c0d;
+           --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35); }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;
+    font-size:16px; line-height:1.6; -webkit-text-size-adjust:100%;
+    padding:0 0 128px;
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:0 16px}
+
+  /* ── 상단 헤더 + 진행바 ── */
+  header{padding:28px 0 18px}
+  .kicker{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--accent);text-transform:uppercase}
+  h1{font-size:23px;line-height:1.35;margin:8px 0 10px;letter-spacing:-.02em}
+  header p{margin:0;color:var(--ink2);font-size:14.5px}
+  .meta{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+  .tag{font-size:12.5px;color:var(--ink2);background:var(--card);border:1px solid var(--line);padding:5px 10px;border-radius:999px}
+  .bar{position:sticky;top:0;z-index:40;background:var(--bg);padding:10px 0 8px;border-bottom:1px solid var(--line)}
+  .bar .track{height:6px;border-radius:99px;background:var(--line);overflow:hidden}
+  .bar .fill{height:100%;width:0;background:var(--accent);transition:width .25s ease}
+  .bar .lbl{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink2);margin-top:6px}
+
+  /* ── 섹션/문항 ── */
+  section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+          box-shadow:var(--shadow);padding:18px 16px;margin:16px 0}
+  .s-no{font-size:12px;font-weight:800;color:var(--accent);letter-spacing:.06em}
+  h2{font-size:18px;margin:6px 0 4px;letter-spacing:-.01em}
+  .s-desc{color:var(--ink2);font-size:14px;margin:0 0 4px}
+  .q{padding:16px 0;border-top:1px solid var(--line)}
+  .q:first-of-type{border-top:0}
+  .q-t{font-size:15.5px;font-weight:700;margin:0 0 3px;display:flex;gap:6px;align-items:flex-start}
+  .req{color:var(--accent);font-size:13px;line-height:1.5}
+  .q-h{color:var(--ink2);font-size:13.5px;margin:0 0 10px}
+  .opts{display:flex;flex-wrap:wrap;gap:8px}
+  .opt{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);background:transparent;
+       color:var(--ink);border-radius:11px;padding:11px 13px;font-size:14.5px;line-height:1.35;
+       cursor:pointer;min-height:46px;font-family:inherit;text-align:left}
+  .opt:active{transform:scale(.985)}
+  .opt .box{width:18px;height:18px;flex:0 0 18px;border:1.5px solid var(--ink2);border-radius:5px;
+            display:grid;place-items:center;font-size:12px;color:transparent}
+  .opt[data-type="single"] .box{border-radius:50%}
+  .opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+  .opt[aria-pressed="true"] .box{background:var(--accent);border-color:var(--accent);color:#fff}
+  input[type=text],textarea{width:100%;font-family:inherit;font-size:15.5px;color:var(--ink);
+      background:transparent;border:1.5px solid var(--line);border-radius:11px;padding:12px;min-height:48px}
+  textarea{min-height:92px;resize:vertical}
+  input:focus,textarea:focus,.opt:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+  /* ── 설명 박스(어긋난 지점) ── */
+  .note{background:var(--warn-soft);border:1px solid var(--line);border-left:3px solid var(--warn);
+        border-radius:10px;padding:12px 13px;margin:2px 0 14px;font-size:14px;color:var(--ink)}
+  .note b{color:var(--warn)}
+  .note ul{margin:8px 0 0;padding-left:18px}
+  .note li{margin:4px 0}
+
+  /* ── 하단 고정 액션 ── */
+  .dock{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--card);
+        border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+  .dock .wrap{padding:0}
+  button.cta{width:100%;border:0;border-radius:12px;background:var(--accent);color:#fff;
+       font-family:inherit;font-size:16.5px;font-weight:800;padding:15px;cursor:pointer}
+  button.ghost{background:transparent;color:var(--ink2);border:1.5px solid var(--line);font-weight:600;font-size:14.5px;padding:12px}
+  .dock .hint{font-size:12.5px;color:var(--ink2);text-align:center;margin:8px 0 0}
+  .row{display:flex;gap:8px;margin-top:8px}
+  .row>*{flex:1}
+
+  /* ── 결과 화면 ── */
+  #result{display:none}
+  .verdict{border:1.5px solid var(--accent);background:var(--accent-soft);border-radius:var(--radius);padding:16px}
+  .verdict h3{margin:0 0 6px;font-size:17px}
+  .verdict p{margin:0;font-size:14.5px;color:var(--ink)}
+  pre.out{white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--line);
+          border-radius:10px;padding:13px;font-size:13px;line-height:1.55;max-height:46vh;overflow:auto;
+          font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:var(--ink);color:var(--bg);
+         padding:10px 16px;border-radius:99px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:60}
+  .toast.on{opacity:.95}
+  footer{color:var(--ink2);font-size:12.5px;text-align:center;padding:18px 0 4px}
+</style>
+</head>
+<body>
+
+<div class="bar"><div class="wrap">
+  <div class="track"><div class="fill" id="fill"></div></div>
+  <div class="lbl"><span id="pct">0%</span><span id="cnt">필수 0 / 0</span></div>
+</div></div>
+
+<div class="wrap">
+  <header>
+    <div class="kicker">상담 전 사전 질문지</div>
+    <h1>클로드 업무 자동화 — 어디까지 만들어 드릴지<br>3분만 체크해 주세요</h1>
+    <p>미팅 시간을 질문으로 다 쓰지 않으려고 만든 폼입니다. 대부분 <b>탭 한 번</b>으로 끝나고, 모르는 항목은 “모름/미정”을 고르시면 됩니다. 다 하시면 맨 아래 버튼으로 <b>답변을 카톡으로 그대로 보내주세요.</b></p>
+    <div class="meta">
+      <span class="tag">⏱ 3~4분</span>
+      <span class="tag">💾 자동 임시저장</span>
+      <span class="tag">🔒 서버 전송 없음</span>
+    </div>
+  </header>
+
+  <div id="form"></div>
+
+  <section id="privacy" style="margin-top:0">
+    <div class="s-no">개인정보 수집·이용 동의</div>
+    <h2>답변은 상담 준비에만 씁니다</h2>
+    <p class="s-desc">
+      <b>수집 목적</b> 상담 범위·견적 산정 및 미팅 일정 조율 ·
+      <b>수집 항목</b> 폼에 입력하신 내용(성함/호칭은 선택) ·
+      <b>보유 기간</b> 상담 종료 후 1년, 이후 파기 ·
+      <b>거부 권리</b> 동의를 거부하실 수 있으며, 이 경우 사전 상담 준비 없이 미팅을 진행합니다.<br>
+      이 폼은 입력 내용을 서버로 전송하지 않습니다. 마지막에 <b>직접 보내기 버튼을 누를 때만</b> 내용이 전달됩니다.
+    </p>
+  </section>
+  <section id="result">
+    <div class="s-no">결과</div>
+    <h2>정리됐습니다</h2>
+    <p class="s-desc">아래 내용을 그대로 보내주시면 됩니다. 미팅 때 이걸 기준으로 범위와 견적을 확정합니다.</p>
+    <div class="verdict" id="verdict"></div>
+    <pre class="out" id="out"></pre>
+  </section>
+
+  <footer>이 폼은 입력 내용을 어디에도 전송하지 않습니다. 브라우저에만 임시 저장되며, 보내기 버튼을 누를 때만 내용이 밖으로 나갑니다.</footer>
+</div>
+
+<div class="dock"><div class="wrap">
+  <button class="cta" id="btnMain">답변 정리하기</button>
+  <div class="row" id="rowShare" style="display:none">
+    <button class="cta ghost" id="btnCopy">전체 복사</button>
+    <button class="cta ghost" id="btnFile">파일로 저장</button>
+  </div>
+  <p class="hint" id="hint">필수 항목만 채우면 됩니다</p>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ─────────── 질문 정의 ─────────── */
+const FORM = [
+{ id:"s1", title:"기본 정보", desc:"누구와 어떤 규모로 일하시는지만 확인합니다.", items:[
+  {id:"name", t:"성함(또는 호칭)", type:"text", ph:"예) 김OO 실장"},
+  {id:"team", t:"대행사 인원", type:"single", req:1, o:["1인(대표 혼자)","2~4인","5~9인","10인 이상"]},
+  {id:"clients", t:"현재 담당 중인 병원 수", type:"single", req:1, o:["1~2곳","3~5곳","6~10곳","11곳 이상","아직 준비 단계"]},
+  {id:"dept", t:"주로 맡는 진료과 (복수 선택)", type:"multi", req:1, o:["치과","피부·성형","정형외과·통증","한의원","안과","산부인과","내과·검진","비뇨의학","정신건강","기타"]},
+  {id:"role", t:"본인 역할", type:"single", req:1, o:["대표","마케팅 실무","콘텐츠 작성","기술·개발 담당","기타"]}
+]},
+
+{ id:"s2", title:"지금 하고 있는 일", desc:"자동화할 대상이 정확히 무엇인지 봅니다.", items:[
+  {id:"vol", t:"한 달에 발행하는 글 수(전체 병원 합계)", type:"single", req:1, o:["10건 미만","10~30건","30~60건","60~120건","120건 이상"]},
+  {id:"ch", t:"실제로 글이 올라가는 곳 (복수 선택)", type:"multi", req:1, o:["네이버 블로그","워드프레스(자체 도메인)","병원 홈페이지 게시판","티스토리","인스타·스레드","카카오채널","유튜브 설명·자막","기타"]},
+  {id:"time", t:"글 1건에 들어가는 시간", type:"single", req:1, o:["30분 미만","30~60분","1~2시간","2시간 이상","사람마다 달라 모름"]},
+  {id:"who", t:"지금 원고는 누가 쓰나요", type:"single", req:1, o:["본인이 직접","직원이 작성","외주 작가","AI로 초안 뽑고 사람이 수정","거의 전부 AI"]},
+  {id:"pain", t:"제일 시간을 잡아먹는 것 (복수 선택)", type:"multi", req:1, o:["소재·키워드 찾기","초안 쓰기","이미지 만들기","의료법 표현 검수","업로드·발행 반복작업","성과 측정·보고","원장님 컨펌 받기"]},
+  {id:"img", t:"이미지는 어떻게 하시나요", type:"single", o:["병원에서 받은 사진","무료·유료 스톡","AI 생성","거의 안 넣음"]},
+  {id:"tpl", t:"글의 형식(구성·톤)이 정해져 있나요", type:"single", req:1, o:["템플릿이 문서로 정리돼 있다","머릿속에는 있지만 문서는 없다","그때그때 다르다"]}
+]},
+
+{ id:"s3", title:"지금 쓰는 AI와 도구", desc:"이미 있는 걸 그대로 살릴 수 있는지 봅니다.", items:[
+  {id:"ai", t:"쓰고 있는 생성형 AI (복수 선택)", type:"multi", req:1, o:["ChatGPT","Claude(클로드)","Gemini","Perplexity","Copilot","뤼튼","클로바X","Grok","이미지 AI(미드저니 등)","아직 없음"]},
+  {id:"plan", t:"유료 결제 중인 것 (복수 선택)", type:"multi", o:["ChatGPT 유료","Claude 유료(Pro/Max)","Gemini 유료","Perplexity 유료","전부 무료만 쓴다","모름"]},
+  {id:"cl", t:"클로드는 어떤 형태로 쓰시나요", type:"single", req:1, o:["웹·앱에서 채팅만","Claude Code(검은 터미널 창)","API 연동","프로젝트·MCP까지 써봄","안 써봤다"]},
+  {id:"auto", t:"자동화·연결 도구 사용 경험 (복수 선택)", type:"multi", req:1, o:["n8n","Make(인테그로맷)","Zapier","구글 앱스스크립트","파이썬 스크립트","GPTs 만들어 봄","워드프레스 AI 플러그인","노션 AI","전혀 없음"]},
+  {id:"sheet", t:"자료는 어디에 모아두시나요 (복수 선택)", type:"multi", o:["구글 스프레드시트","엑셀 파일","노션","에어테이블","카톡·메모장","따로 없음"]},
+  {id:"code", t:"코드·터미널에 대한 감각", type:"single", req:1, o:["전혀 모른다","알려주면 복사·붙여넣기는 가능","간단한 수정은 가능","개발 경험 있다"]},
+  {id:"budget", t:"AI 도구에 매달 쓸 수 있는 금액", type:"single", req:1, o:["0원(무료만)","5만원 이하","5~15만원","15~30만원","30만원 이상","정해두지 않음"]}
+]},
+
+{ id:"s4", title:"권한 — 이게 없으면 자동화가 안 만들어집니다", desc:"자동 발행은 “계정과 권한이 있느냐”에서 대부분 막힙니다. 모르면 ‘모름’으로 두세요.", items:[
+  {id:"wp", t:"워드프레스 계정 권한", type:"single", req:1, o:["관리자 계정 있음","편집자 권한만 있음","병원이 갖고 있어 요청해야 함","워드프레스는 안 쓴다","모름"]},
+  {id:"wpplug", t:"워드프레스에 플러그인을 직접 설치할 수 있나요", type:"single", o:["가능","병원 승인 필요","불가","모름 / 해당 없음"]},
+  {id:"nv", t:"네이버 블로그 계정", type:"single", req:1, o:["대행사가 직접 운영(아이디 보유)","병원 계정을 위임받아 사용","병원이 직접 올린다","안 쓴다"]},
+  {id:"dom", t:"도메인·호스팅 관리 권한", type:"single", o:["대행사가 관리","병원·다른 업체가 관리","모름","해당 없음"]},
+  {id:"pay", t:"API 키·구독 결제를 본인이 바로 할 수 있나요", type:"single", req:1, o:["바로 가능","대표·상급자 승인 필요","불가","모름"]},
+  {id:"pc", t:"주로 쓰는 컴퓨터", type:"single", req:1, o:["윈도우","맥","둘 다","회사 PC라 설치 제한이 있다"]},
+  {id:"conf", t:"원고 최종 컨펌 라인", type:"single", req:1, o:["원장 검수 필수","병원 실장·담당자 검수","대행사가 자율 발행","병원마다 다르다"]},
+  {id:"pii", t:"다루는 자료에 환자 정보나 실제 후기가 들어가나요", type:"single", req:1, o:["전혀 없다","환자 후기 인용이 있다","진료·개인정보가 들어간다","모르겠다"]}
+]},
+
+{ id:"s5", title:"먼저 정해야 할 3가지", desc:"이 3개가 갈리면 만드는 물건 자체가 달라집니다. 미팅 전에 방향만 잡아두려는 항목입니다.",
+  items:[
+  {id:"g1", t:"① “간편하게”와 병원 업종이 부딪힙니다 — 어디까지 자동으로 나가야 할까요", type:"single", req:1,
+   note:`<b>왜 묻나</b> — 의료광고는 표현 규제와 심의가 걸립니다. AI가 지어낸 효과·수치·비교 표현이 사람 손을 안 거치고 그대로 발행되면, 그 책임은 병원과 <b>대행사</b>에 옵니다. “버튼 없이 다 자동”과 “초안까지 자동, 발행은 사람이”는 만드는 물건이 완전히 다릅니다.`,
+   o:["AI는 초안까지, 발행 버튼은 사람이 누른다 (권장)","자동 발행하되 금지표현·사실확인 필터를 넣어 달라","완전 자동으로 올리고 검수는 내가 알아서 한다","아직 모르겠다 — 미팅에서 정하고 싶다"]},
+  {id:"g1b", t:"의료광고 심의(사전심의) 경험", type:"single", o:["해봤고 기준을 안다","들어는 봤다","처음 듣는다"]},
+
+  {id:"g2", t:"② 만들어 드릴까요, 만들 줄 알게 해드릴까요", type:"single", req:1,
+   note:`<b>이게 견적의 핵심입니다.</b>
+   <ul>
+     <li><b>A안 — 구축 대행</b>: 제가 파이프라인을 만들어 드리고, 대표님은 <b>사용법만</b> 익히시면 됩니다. 회차 단위로 진행합니다(1회차 10만원 선, 보통 1~3회차).</li>
+     <li><b>B안 — 교육</b>: 대표님이 <b>직접 만들고 고칠 수 있게</b> 되는 것이 목표입니다. 시간당 교육으로 진행하며, 다루는 범위가 깊어질수록 시급이 올라갑니다.</li>
+   </ul>
+   ※ 금액은 참고 범위입니다. 답변을 보고 범위를 확정한 뒤 미팅에서 최종 견적을 드립니다.`,
+   o:["A안 — 만들어 주시고 쓰는 법만 알려주세요","B안 — 제가 직접 만들 수 있게 배우고 싶습니다","A로 먼저 돌리고, 나중에 B로 배우고 싶습니다","아직 모르겠다 — 설명을 듣고 정하겠습니다"]},
+  {id:"g2b", t:"이번 건에 쓸 수 있는 총 예산 감각", type:"single", req:1, o:["10만원 안팎","20~30만원","30~50만원","50만원 이상","결과 보고 정하겠다"]},
+  {id:"g2c", t:"언제까지 돌아가면 좋겠습니까", type:"single", req:1, o:["2주 안","1개월 안","2~3개월","급하지 않다"]},
+
+  {id:"g3", t:"③ 어디에 올리느냐로 난이도가 갈립니다", type:"single", req:1,
+   note:`<b>워드프레스</b>는 공식 통로(API)가 열려 있어 <b>완전 자동 발행</b>이 됩니다. <b>네이버 블로그</b>는 자동 발행 통로가 사실상 막혀 있어, 현실적인 최선은 <b>“초안·이미지·태그까지 자동 생성 → 사람이 5분 안에 붙여넣고 발행”</b>인 반자동입니다. 어느 쪽이 우선인지에 따라 만드는 물건이 달라집니다.`,
+   o:["워드프레스 우선","네이버 블로그 우선","둘 다 필요하다","아직 미정"]},
+  {id:"g3b", t:"네이버가 우선이라면, 반자동(초안 자동 + 사람이 붙여넣기)도 괜찮으신가요", type:"single", o:["괜찮다","완전 자동이 아니면 의미 없다","해당 없음(워드프레스 위주)"]}
+]},
+
+{ id:"s6", title:"GEO — 무엇을 노리시나요", desc:"목표가 정해져야 글의 형식이 정해집니다.", items:[
+  {id:"goal", t:"노리는 노출 (복수 선택)", type:"multi", req:1, o:["ChatGPT·Perplexity 답변에 병원이 인용되는 것","네이버 AI 검색 노출","구글 AI 요약(AI Overviews)","기존 검색 순위(SEO)","일단 글 수를 늘리는 것","잘 모르겠다"]},
+  {id:"kpi", t:"“잘 되고 있다”를 무엇으로 판단하시나요", type:"single", req:1, o:["발행 건수","검색 유입 수","전화·예약 문의 수","AI 답변에 인용됐는지 직접 확인","아직 정하지 않음"]},
+  {id:"ref", t:"참고하고 싶은 경쟁사·사례가 있나요", type:"text", ph:"URL이나 이름 (없으면 비워두세요)"}
+]},
+
+{ id:"s7", title:"미팅 조율", desc:"", items:[
+  {id:"day", t:"편한 요일 (복수 선택)", type:"multi", req:1, o:["월","화","수","목","금","주말도 가능"]},
+  {id:"hour", t:"편한 시간대 (복수 선택)", type:"multi", req:1, o:["오후 1~3시","오후 3~5시","오후 5~7시","저녁 7시 이후","오전"]},
+  {id:"place", t:"장소", type:"single", req:1, o:["상무지구 카페","사무실로 와주세요","화상(줌·구글밋)","상관없음"]},
+  {id:"screen", t:"미팅 때 실제 쓰시는 화면(워드프레스·블로그 관리자)을 같이 볼 수 있나요", type:"single", req:1,
+   note:`같이 보면 그 자리에서 <b>되는 것과 안 되는 것</b>이 바로 갈립니다. 노트북만 가져오시면 됩니다.`,
+   o:["네, 노트북 가져가겠습니다","계정은 있는데 로그인은 어려울 수 있다","어렵다"]},
+  {id:"ask", t:"미팅에서 꼭 답을 듣고 싶은 것", type:"area", ph:"예) 네이버도 진짜 자동으로 되는지, 글 품질이 어느 정도인지"},
+  {id:"etc", t:"그 밖에 하고 싶은 말", type:"area", ph:"자유롭게 적어주세요 (없으면 비워두세요)"}
+]}
+];
+
+/* ─────────── 렌더 ─────────── */
+const KEY = "geo-intake-v1";
+const state = JSON.parse(localStorage.getItem(KEY) || "{}");
+const root = document.getElementById("form");
+
+FORM.forEach((sec, si) => {
+  const el = document.createElement("section");
+  el.innerHTML = `<div class="s-no">SECTION ${si+1} / ${FORM.length}</div><h2>${sec.title}</h2>` +
+                 (sec.desc ? `<p class="s-desc">${sec.desc}</p>` : "");
+  sec.items.forEach(it => {
+    const q = document.createElement("div");
+    q.className = "q";
+    q.innerHTML = `<p class="q-t">${it.t}${it.req?'<span class="req">*</span>':''}</p>` +
+                  (it.note ? `<div class="note">${it.note}</div>` : "") +
+                  (it.ph && (it.type==="text"||it.type==="area") ? "" : "");
+    if (it.type === "text" || it.type === "area") {
+      const f = document.createElement(it.type === "area" ? "textarea" : "input");
+      if (it.type !== "area") f.type = "text";
+      f.placeholder = it.ph || "";
+      f.value = state[it.id] || "";
+      f.addEventListener("input", () => { state[it.id] = f.value.trim(); save(); });
+      q.appendChild(f);
+    } else {
+      const box = document.createElement("div");
+      box.className = "opts";
+      it.o.forEach(op => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "opt"; b.dataset.type = it.type;
+        b.innerHTML = `<span class="box">✓</span><span>${op}</span>`;
+        const on = it.type === "multi"
+          ? (state[it.id] || []).includes(op)
+          : state[it.id] === op;
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+        b.addEventListener("click", () => {
+          if (it.type === "multi") {
+            const cur = new Set(state[it.id] || []);
+            cur.has(op) ? cur.delete(op) : cur.add(op);
+            state[it.id] = [...cur];
+            b.setAttribute("aria-pressed", cur.has(op) ? "true" : "false");
+          } else {
+            state[it.id] = op;
+            [...box.children].forEach(c => c.setAttribute("aria-pressed", "false"));
+            b.setAttribute("aria-pressed", "true");
+          }
+          save();
+        });
+        box.appendChild(b);
+      });
+      q.appendChild(box);
+    }
+    el.appendChild(q);
+  });
+  root.appendChild(el);
+});
+
+const REQ = FORM.flatMap(s => s.items.filter(i => i.req).map(i => i.id));
+function filled(id){ const v = state[id]; return Array.isArray(v) ? v.length > 0 : !!(v && String(v).trim()); }
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); progress(); }
+function progress(){
+  const done = REQ.filter(filled).length;
+  const p = Math.round(done / REQ.length * 100);
+  document.getElementById("fill").style.width = p + "%";
+  document.getElementById("pct").textContent = p + "%";
+  document.getElementById("cnt").textContent = `필수 ${done} / ${REQ.length}`;
+}
+progress();
+
+/* ─────────── 결과 만들기 ─────────── */
+function label(id){
+  for (const s of FORM) for (const i of s.items) if (i.id === id) return i.t;
+  return id;
+}
+function val(id){
+  const v = state[id];
+  return Array.isArray(v) ? v.join(", ") : (v || "");
+}
+function verdict(){
+  const g2 = state.g2 || "";
+  let track, why = [];
+  if (g2.startsWith("A안")) { track = "A안 — 구축 대행 (회차 단위)"; why.push("본인이 A안을 선택"); }
+  else if (g2.startsWith("B안")) { track = "B안 — 교육 (시간당)"; why.push("본인이 B안을 선택"); }
+  else if (g2.startsWith("A로 먼저")) { track = "A안으로 시작 → 이후 B안 교육"; why.push("구축 먼저, 교육은 이후 희망"); }
+  else {
+    const codeY = ["간단한 수정은 가능","개발 경험 있다"].includes(state.code);
+    track = codeY ? "B안(교육) 쪽으로 기울어짐" : "A안(구축 대행) 쪽으로 기울어짐";
+    why.push(codeY ? "코드 감각이 있어 직접 운영이 가능한 편" : "코드 경험이 없어 직접 구축은 시간이 오래 걸림");
+  }
+  if (state.g3 === "네이버 블로그 우선") why.push("네이버 우선 → 완전 자동 대신 반자동 설계 필요");
+  if (state.g3 === "워드프레스 우선" || state.g3 === "둘 다 필요하다") why.push("워드프레스 포함 → API 자동 발행 가능");
+  if (state.wp === "관리자 계정 있음") why.push("워드프레스 관리자 권한 보유 — 바로 착수 가능");
+  else if (state.wp && state.wp !== "워드프레스는 안 쓴다") why.push("워드프레스 권한 확보가 선행 과제");
+  if (state.g1 && state.g1.startsWith("완전 자동")) why.push("완전 자동 희망 — 의료광고 표현 필터를 반드시 얹어야 함");
+  return { track, why };
+}
+function build(){
+  const v = verdict();
+  const L = [];
+  L.push("■ 클로드 업무 자동화 — 사전 질문지 답변");
+  L.push(`(작성: ${state.name || "미기재"})`);
+  L.push("");
+  FORM.forEach(s => {
+    const lines = s.items.map(i => filled(i.id) ? `· ${i.t}\n  → ${val(i.id)}` : null).filter(Boolean);
+    if (!lines.length) return;
+    L.push(`[${s.title}]`);
+    L.push(lines.join("\n"));
+    L.push("");
+  });
+  L.push("[자동 판정]");
+  L.push(`· 추천 방향: ${v.track}`);
+  v.why.forEach(w => L.push(`· ${w}`));
+  return L.join("\n");
+}
+
+const dock = { main: document.getElementById("btnMain"), row: document.getElementById("rowShare"),
+               copy: document.getElementById("btnCopy"), file: document.getElementById("btnFile"),
+               hint: document.getElementById("hint") };
+function toast(m){ const t = document.getElementById("toast"); t.textContent = m; t.classList.add("on");
+                   setTimeout(() => t.classList.remove("on"), 1800); }
+
+dock.main.addEventListener("click", async () => {
+  if (dock.main.dataset.stage !== "send") {
+    const miss = REQ.filter(id => !filled(id));
+    if (miss.length) {
+      toast(`아직 ${miss.length}개 남았습니다: ${label(miss[0])}`);
+      const secs = [...document.querySelectorAll("section")];
+      for (let si = 0; si < FORM.length; si++)
+        if (FORM[si].items.some(i => i.id === miss[0])) { secs[si].scrollIntoView({behavior:"smooth", block:"start"}); break; }
+      return;
+    }
+    const v = verdict();
+    document.getElementById("verdict").innerHTML =
+      `<h3>추천 방향: ${v.track}</h3><p>${v.why.map(w => "· " + w).join("<br>")}</p>`;
+    document.getElementById("out").textContent = build();
+    document.getElementById("result").style.display = "block";
+    document.getElementById("result").scrollIntoView({behavior:"smooth", block:"start"});
+    dock.main.textContent = "카카오톡으로 보내기";
+    dock.main.dataset.stage = "send";
+    dock.row.style.display = "flex";
+    dock.hint.textContent = "공유창이 안 뜨면 ‘전체 복사’ 후 카톡에 붙여넣어 주세요";
+    return;
+  }
+  const text = build();
+  try {
+    if (navigator.share) { await navigator.share({ title: "사전 질문지 답변", text }); return; }
+    throw new Error("no share");
+  } catch (e) {
+    try { await navigator.clipboard.writeText(text); toast("복사했습니다 — 카톡에 붙여넣어 주세요"); }
+    catch (_) { toast("아래 내용을 길게 눌러 복사해 주세요"); }
+  }
+});
+dock.copy.addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(build()); toast("전체 복사 완료"); }
+  catch (e) { toast("아래 내용을 길게 눌러 복사해 주세요"); }
+});
+dock.file.addEventListener("click", () => {
+  const blob = new Blob([build()], { type: "text/plain;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `사전질문지_${(state.name || "답변").replace(/\s/g, "")}.txt`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  toast("파일로 저장했습니다");
+});
+</script>
+</body>
+</html>
+
